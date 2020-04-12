@@ -145,7 +145,6 @@ def periodicAction():
 
     ### BEGIN READING SENSOR DATA
     
-    print("joao")
     calculateTemp()
     calculateHumid()
     
