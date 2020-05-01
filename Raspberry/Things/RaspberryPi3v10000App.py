@@ -67,8 +67,8 @@ def on_connect(client, userdata, flags, rc):
     # reconnect then subscriptions will be renewed.
 
     # BEGIN SAMPLE CODE
-    #client.subscribe("commands/" + tenantId + "/")
-    client.subscribe("control/+/+/req/#")
+    client.subscribe("commands/" + tenantId + "/")
+    #client.subscribe("control/+/+/req/#")
     # END SAMPLE CODE
 
     # Time stamp when the periodAction function shall be called again
