@@ -29,7 +29,8 @@ Adafruit_BME280 bme;
 /* Configuration section, adjust to your settings                         */
 /**************************************************************************/
 
-#define tenantId "t6246773985cc4d95816d9bc53ceb61c5_hub"
+//#define tenantId "t6246773985cc4d95816d9bc53ceb61c5_hub"
+#define tenantId "t5f7ed5ae8357493c914ff61b8287a3e9_hub"
 
 /* MQTT broker endpoint */
 const char* hub_adapter_host = "mqtt.bosch-iot-hub.com";
@@ -40,18 +41,21 @@ const char* mqttServerFingerprint = "<00 B6 42 DA A5 6F 5A 9F F3 B3 7E 50 90 58 
 #endif
 
 /* Define the period of data transmission in ms */
-#define MQTT_DATA_PERIOD 10000
+#define MQTT_DATA_PERIOD 300000
 
 /* Define the buffer size for payload strings */
 #define MQTT_MAX_SIZE  50
 
 /* Device Configuration */
-String deviceId = "joao.ESP8266.SFP:esp8266_completo";
-String authId = "joao.ESP8266.SFP_esp8266_completo";
+//String deviceId = "joao.ESP8266.SFP:esp8266_completo";
+String deviceId = "joao.Tese.Devices:ESP8266_as_Gateway";
+//String authId = "joao.ESP8266.SFP_esp8266_completo";
+String authId = "joao.Tese.Devices_ESP8266_as_Gateway";
 const char* device_password = "Tartaruga5*";
 
 /* Payload Configuration*/
-String ditto_topic = "joao.ESP8266.SFP/esp8266_completo";
+//String ditto_topic = "joao.ESP8266.SFP/esp8266_completo";
+String ditto_topic = "joao.Tese.Devices/ESP8266_as_Gateway";
 
 /* WiFi Configuration */
 const char* ssid = "DESKTOP-C6SOVQS 6152";
@@ -109,8 +113,8 @@ String serverName = "https://device.eu1.bosch-iot-rollouts.com/D60F7F26-9AFC-4FF
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastTime = 0;
-// Set timer to 1 minute
-unsigned long timerDelay = 60000;
+// Set timer to 20 minutes
+unsigned long timerDelay = 1200000;
 
 String links_1;
 int httpResponseCode_1;
@@ -149,17 +153,56 @@ void setup_wifi() {
 /**************************************************************************/
 /* Function called when data on a subscribed topic arrives                */
 /**************************************************************************/
-void mqttDataReceived(char* topic, byte* payload, unsigned int length) {
+void mqttDataReceived(char* mqttTopic, byte* mqttPayload, unsigned int mqttLength) {
 
-  /* BEGIN SAMPLE CODE */
+  Serial.println("joao");
 
-  if ((char)payload[0] == '1') {
-    Serial.println("MQTT Data sucessfully received");
-  } else {
-    Serial.println("No MQTT Data reveived");
+  String reqTopic = (String) mqttTopic;
+  reqTopic.toLowerCase();
+
+  /* If this is a 'switch' command, flip the lights */
+  if (reqTopic.startsWith("command") && reqTopic.endsWith("test")) {
+    String newState;
+    Serial.println("Switch command received, switching ...");
+
+    newState = "Alive";
+
+    /* parse Bosch IoT Hub's message ID for response */
+    String messageId = reqTopic.substring(reqTopic.indexOf("req/") + 4);
+    messageId = messageId.substring(0, messageId.indexOf("/"));
+
+    /* if this is a 2-way command, respond */
+    if (messageId != "") {
+      /*Serial.println("Sender expects reply, responding to message with ID: " + messageId);*/
+
+      /* create MQTT response topic */
+      String resTopic = ("command///res/" + messageId + "/200").c_str();
+
+      /* parse Bosch IoT Things correlation ID for response*/
+      String reqPayload = (String) (char*) mqttPayload;
+
+      /* 17 is the length of 'correlation-id' and subsequent '":"' */
+      String correlationId;
+      correlationId = reqPayload.substring(reqPayload.indexOf("correlation-id") + 17);
+
+      String correlationId2;
+      correlationId2 = correlationId;
+      correlationId.remove(correlationId2.indexOf('"'));
+
+      Serial.println("Sender expects reply, responding to message with Correlation-Id: " + correlationId);
+      Serial.println();
+
+      /* create Ditto compliant MQTT response payload */
+      String resPayload = "{\"topic\":\"" + ditto_topic + "/things/live/messages/switch\",";
+      resPayload += "\"headers\":{\"correlation-id\":\"" + correlationId + "\",";
+      resPayload += "\"version\":2,\"content-type\":\"text/plain\"},";
+      resPayload += "\"path\":\"/inbox/messages/switch\",";
+      resPayload += "\"value\":\"" + newState + "\",";
+      resPayload += "\"status\": 200 }";
+
+      mqttClient.publish(resTopic.c_str(), resPayload.c_str());
+    }
   }
-
-  /* END SAMPE CODE */
 }
 
 /**************************************************************************/
@@ -175,8 +218,8 @@ void reconnect() {
       /* Attempt to Connect succesfull */
       Serial.println("Successfully connected to MQTT Broker\n");
       /* SAMPLE CODE */
-      //String topic = telemetryTopic + "/led";
-      //mqttClient.subscribe(topic.c_str());
+      String topic = "command/+/+/req/#";
+      mqttClient.subscribe(topic.c_str());
       /* END SAMPLE CODE */
     } else {
       /* otherwise wait for 5 seconds before retrying */

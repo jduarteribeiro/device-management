@@ -21,7 +21,7 @@ const char* password = "12345678";
 //Your Domain name with URL path or IP address with path
 const char* host = "device.eu1.bosch-iot-rollouts.com";
 const char* fingerprint = "BE A7 9A 85 9D C9 1A CF 91 5F CF E5 13 27 F5 3F 0B B1 63 51";
-String serverName = "https://device.eu1.bosch-iot-rollouts.com/D60F7F26-9AFC-4FFB-8FA5-00A6FC6D774A/controller/v1/esp8266_01";
+String serverName = "https://device.eu1.bosch-iot-rollouts.com/D60F7F26-9AFC-4FFB-8FA5-00A6FC6D774A/controller/v1/test240520";
 
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
@@ -136,7 +136,7 @@ String Poll_for_Updates(String serverName) {
   // Your IP address with path or Domain name with URL path
   http.begin(wifiClient, serverName);
   http.addHeader("Accept", "application/hal+json");
-  http.addHeader("Authorization", "TargetToken 16873cd42738d484f3436de00906f5e2");
+  http.addHeader("Authorization", "TargetToken a61bcf05710e953bfd64daff72414ffc");
 
   // Send HTTP POST request
   httpResponseCode_1 = http.GET();
@@ -185,7 +185,7 @@ String Get_Information(String url_information) {
   // Your IP address with path or Domain name with URL path
   http.begin(wifiClient, url_information);
   http.addHeader("Accept", "application/hal+json");
-  http.addHeader("Authorization", "TargetToken 16873cd42738d484f3436de00906f5e2");
+  http.addHeader("Authorization", "TargetToken a61bcf05710e953bfd64daff72414ffc");
 
   // Send HTTP POST request
   httpResponseCode_2 = http.GET();
@@ -248,7 +248,7 @@ void httpPOSTRequest(String feedback_url, String id) {
   http.begin(wifiClient, feedback_url);
   http.addHeader("Content-Type", "application/json;charset=UTF-8");
   http.addHeader("Accept", "application/hal+json");
-  http.addHeader("Authorization", "TargetToken 16873cd42738d484f3436de00906f5e2");
+  http.addHeader("Authorization", "TargetToken a61bcf05710e953bfd64daff72414ffc");
 
   // Send HTTP POST request
   String data = ("{\"id\":\"" + id + "\",\"status\":{\"result\":{\"finished\":\"success\"},\"execution\":\"closed\",\"details\":[ ]}}");
@@ -273,7 +273,7 @@ void Download_and_Update_Sketch(String url_download) {
   WiFiClientSecure client;
   client.setInsecure();
 
-  String feedback_url = "https://device.eu1.bosch-iot-rollouts.com/D60F7F26-9AFC-4FFB-8FA5-00A6FC6D774A/controller/v1/esp8266_01/deploymentBase/" + id_str + "/feedback";
+  String feedback_url = "https://device.eu1.bosch-iot-rollouts.com/D60F7F26-9AFC-4FFB-8FA5-00A6FC6D774A/controller/v1/test240520/deploymentBase/" + id_str + "/feedback";
 
   // Atualização Sketch ---------------------------------
   Serial.println("*** Atualização do sketch ***");

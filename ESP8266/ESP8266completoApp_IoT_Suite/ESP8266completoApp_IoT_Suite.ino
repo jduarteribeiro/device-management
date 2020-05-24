@@ -117,23 +117,69 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
   Serial.print("MAC address: ");
   Serial.println(WiFi.macAddress());
-  Serial.println(" ");
 }
 
 /**************************************************************************/
 /* Function called when data on a subscribed topic arrives                */
 /**************************************************************************/
-void mqttDataReceived(char* topic, byte* payload, unsigned int length) {
+void mqttDataReceived(char* mqttTopic, byte* mqttPayload, unsigned int mqttLength) {
 
-  /* BEGIN SAMPLE CODE */
+  Serial.println("joao");
 
-  if ((char)payload[0] == '1') {
-    Serial.println("MQTT Data sucessfully received");
-  } else {
-    Serial.println("No MQTT Data reveived");
+  String reqTopic = (String) mqttTopic;
+  reqTopic.toLowerCase();
+
+  /* If this is a 'switch' command, flip the lights */
+  //if (reqTopic.startsWith("control") && reqTopic.endsWith("switch")) {
+  if (reqTopic.startsWith("command") && reqTopic.endsWith("switch")) {
+    String newState;
+    Serial.println("Switch command received, switching ...");
+
+    /* flip the lights  */
+    if (LED_BUILTIN == LOW) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      newState = "LED is now off!";
+    } else {
+      digitalWrite(LED_BUILTIN, LOW);
+      newState = "LED is now on!";
+    }
+
+    /* parse Bosch IoT Hub's message ID for response */
+    String messageId = reqTopic.substring(reqTopic.indexOf("req/") + 4);
+    messageId = messageId.substring(0, messageId.indexOf("/"));
+
+    /* if this is a 2-way command, respond */
+    if (messageId != "") {
+      /*Serial.println("Sender expects reply, responding to message with ID: " + messageId);*/
+
+      /* create MQTT response topic */
+      //String resTopic = ("control///res/" + messageId + "/200").c_str();
+      String resTopic = ("command///res/" + messageId + "/200").c_str();
+
+      /* parse Bosch IoT Things correlation ID for response*/
+      String reqPayload = (String) (char*) mqttPayload;
+
+      /* 17 is the length of 'correlation-id' and subsequent '":"' */
+      String correlationId;
+      correlationId = reqPayload.substring(reqPayload.indexOf("correlation-id") + 17);
+
+      String correlationId2;
+      correlationId2 = correlationId;
+      correlationId.remove(correlationId2.indexOf('"'));
+
+      Serial.println("Sender expects reply, responding to message with Correlation-Id: " + correlationId);
+
+      /* create Ditto compliant MQTT response payload */
+      String resPayload = "{\"topic\":\"" + ditto_topic + "/things/live/messages/switch\",";
+      resPayload += "\"headers\":{\"correlation-id\":\"" + correlationId + "\",";
+      resPayload += "\"version\":2,\"content-type\":\"text/plain\"},";
+      resPayload += "\"path\":\"/inbox/messages/switch\",";
+      resPayload += "\"value\":\"" + newState + "\",";
+      resPayload += "\"status\": 200 }";
+
+      mqttClient.publish(resTopic.c_str(), resPayload.c_str());
+    }
   }
-
-  /* END SAMPE CODE */
 }
 
 /**************************************************************************/
@@ -146,14 +192,16 @@ void reconnect() {
 
     /* If connected to the MQTT broker... */
 
-
     if (mqttClient.connect(clientId.c_str(), username.c_str(), device_password)) {
-      /* Attempt to Connect succesfull */
-      Serial.println("Successfully connected to MQTT Broker\n");
-      /* SAMPLE CODE */
-      //String topic = telemetryTopic + "/led";
-      //mqttClient.subscribe(topic.c_str());
-      /* END SAMPLE CODE */
+      /* Attempt to Connect successful */
+      Serial.println("Successfully connected to MQTT Broker");
+
+      /* Subscribe for command messages from Bosch IoT Hub */
+      //String topic = "control/+/+/req/#";
+      String topic = "command/+/+/req/#";
+      mqttClient.subscribe(topic.c_str());
+      Serial.println("Subscribed to topic: " + topic);
+
     } else {
       /* otherwise wait for 5 seconds before retrying */
       Serial.println("Waiting for next attempt to connect to MQTT Broker");
@@ -243,7 +291,6 @@ void setup() {
 
   Serial.print("Device ID: ");
   Serial.println(clientId);
-  Serial.println(" ");
 
   /* Add the device ID to the telemetry topic as the final element */
   telemetryTopic += deviceId;
@@ -262,11 +309,11 @@ void setup() {
   }
 
   if (!wifiClient.verify(mqttServerFingerprint, hub_adapter_host)) {
-      Serial.println("Verification failed, restart Device");
+    Serial.println("Verification failed, restart Device");
     ESP.restart();
-    } else {
-  	Serial.println("Successfully verified server certificate");
-    }
+  } else {
+    Serial.println("Successfully verified server certificate");
+  }
 #endif
 
   /*Test MQQT Client*/
@@ -283,6 +330,10 @@ void setup() {
 
   //Luminosidade
   value.setminMeasured(1024.0);
+
+  /* Set GPIO 2 pin as output and switch the LED to LOW == 'on' */
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 void loop() {
